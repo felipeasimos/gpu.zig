@@ -5,7 +5,7 @@ const Buffer = @import("buffer.zig").Buffer;
 
 /// orchestrate buffers, push constants and shader code
 pub const ComputePipeline = struct {
-    buffers: []Buffer,
+    buffers: std.ArrayList(*Buffer) = .empty,
     desc_set: vk.DescriptorSet = .null_handle,
     desc_set_pool: vk.DescriptorPool = .null_handle,
     desc_set_layout: vk.DescriptorSetLayout = .null_handle,
@@ -14,7 +14,7 @@ pub const ComputePipeline = struct {
     shader_module: vk.ShaderModule = .null_handle,
     pub const Builder = struct {
         b_code: []const u8,
-        b_buffers: std.ArrayList(Buffer) = .empty,
+        b_buffers: std.ArrayList(*Buffer) = .empty,
         b_push_constants_sizes: std.ArrayList(usize) = .empty,
         b_gpu: *GPU,
         pub fn init(gpu: *GPU) Builder {
@@ -28,7 +28,7 @@ pub const ComputePipeline = struct {
             new.b_code = arg_code;
             return new;
         }
-        pub fn buffer(self: Builder, buf: Buffer) Builder {
+        pub fn buffer(self: Builder, buf: *Buffer) Builder {
             var new = self;
             new.b_buffers.append(self.b_gpu.allocator, buf) catch
                 @panic("Couldn't append buffer to pipeline builder");
@@ -44,7 +44,7 @@ pub const ComputePipeline = struct {
             var self = builder;
             const bindings = try self.b_gpu.allocator.alloc(vk.DescriptorSetLayoutBinding, self.b_buffers.items.len);
             defer self.b_gpu.allocator.free(bindings);
-            for (self.b_buffers.items, 0..) |*buf, i| {
+            for (self.b_buffers.items, 0..) |buf, i| {
                 bindings[i] = buf.descriptorBinding(@intCast(i), 1);
             }
             const push_constant_ranges = try self.b_gpu.allocator.alloc(vk.PushConstantRange, self.b_push_constants_sizes.items.len);
@@ -62,7 +62,7 @@ pub const ComputePipeline = struct {
             }, null);
             var desc_pool_sizes = try self.b_gpu.allocator.alloc(vk.DescriptorPoolSize, self.b_buffers.items.len);
             defer self.b_gpu.allocator.free(desc_pool_sizes);
-            for (self.b_buffers.items, 0..) |*buf, i| {
+            for (self.b_buffers.items, 0..) |buf, i| {
                 desc_pool_sizes[i] = .{
                     .type = buf.desc_type,
                     .descriptor_count = 1,
@@ -82,7 +82,7 @@ pub const ComputePipeline = struct {
             }, @ptrCast(&desc_set));
             const write_desc_sets = try self.b_gpu.allocator.alloc(vk.WriteDescriptorSet, self.b_buffers.items.len);
             defer self.b_gpu.allocator.free(write_desc_sets);
-            for (self.b_buffers.items, 0..) |*buf, i| {
+            for (self.b_buffers.items, 0..) |buf, i| {
                 write_desc_sets[i] = vk.WriteDescriptorSet{
                     .dst_set = desc_set,
                     .dst_binding = @intCast(i),
@@ -133,7 +133,7 @@ pub const ComputePipeline = struct {
                 @ptrCast(&pipeline),
             );
             return .{
-                .buffers = self.b_buffers.items,
+                .buffers = self.b_buffers,
                 .desc_set_layout = desc_set_layout,
                 .pipeline = pipeline,
                 .pipeline_layout = layout,
@@ -145,7 +145,7 @@ pub const ComputePipeline = struct {
     };
 
     pub fn deinit(self: *@This(), gpu: *GPU) void {
-        gpu.allocator.free(self.buffers);
+        self.buffers.deinit(gpu.allocator);
         if (self.shader_module != .null_handle) {
             gpu.dev.destroyShaderModule(self.shader_module, null);
         }

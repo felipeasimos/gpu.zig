@@ -1,6 +1,7 @@
 const GPU = @import("gpu.zig").GPU;
 const vk = @import("vulkan");
 const std = @import("std");
+const utils = @import("utils.zig");
 
 pub const Buffer = struct {
     size: usize,
@@ -160,17 +161,6 @@ pub const Buffer = struct {
 
         const mapped_memory_data = @as([*]u8, @ptrCast(mapped_memory))[0..data.len];
         std.mem.copyForwards(u8, mapped_memory_data, data);
-        for (0..mapped_memory_data.len) |i| {
-            std.debug.print("mapped[{}] = {}\n", .{ i, mapped_memory_data[i] });
-        }
-        for (0..data.len) |i| {
-            std.debug.print("data[{}] = {}\n", .{ i, data[i] });
-        }
-        try gpu.dev.flushMappedMemoryRanges(1, &[_]vk.MappedMemoryRange{.{
-            .memory = self.buffer_memory,
-            .offset = 0,
-            .size = data.len,
-        }});
     }
     pub fn readFromBuffer(self: *@This(), gpu: *GPU, data: []u8) !void {
         if (self.buffer_mem_type != .DeviceToHost) {
@@ -191,7 +181,7 @@ pub const Buffer = struct {
         if (to.handle == .null_handle) {
             return error.BufferHandleNotInitialized;
         }
-        gpu.dev.cmdCopyBuffer(cmd_buffer, to.handle, self.handle, &[_]vk.BufferCopy{.{
+        gpu.dev.cmdCopyBuffer(cmd_buffer, self.handle, to.handle, 1, &[_]vk.BufferCopy{.{
             .src_offset = 0,
             .dst_offset = 0,
             .size = size,
@@ -212,5 +202,19 @@ pub const Buffer = struct {
             .descriptor_type = self.desc_type,
             .stage_flags = self.stage_flags,
         };
+    }
+    pub fn format(
+        self: @This(),
+        writer: anytype,
+    ) !void {
+        try writer.print(".{{ .usage = ", .{});
+        try utils.printPositiveBitFields(self.usage, writer);
+        try writer.print("}}\n", .{});
+
+        try writer.print(".{{ .stage = ", .{});
+        try utils.printPositiveBitFields(self.stage_flags, writer);
+        try writer.print("}}\n", .{});
+
+        try writer.print(".{{ .memory_type = {} }}\n", .{self.buffer_mem_type});
     }
 };
