@@ -116,6 +116,7 @@ pub fn main() !void {
     defer gpu.dev.freeCommandBuffers(cmd_pool, 1, @ptrCast(&cmd_buffer));
 
     var data: [1024]f32 = undefined;
+    var result: [1024]f32 = undefined;
     for (0..1024) |i| {
         data[i] = @floatFromInt(i);
     }
@@ -163,15 +164,15 @@ pub fn main() !void {
     }}, .null_handle);
 
     try gpu.dev.queueWaitIdle(gpu.compute_queue.?.handle);
-    try out_buf.readFromBuffer(&gpu, std.mem.sliceAsBytes(&data));
+    try out_buf.readFromBuffer(&gpu, std.mem.sliceAsBytes(&result));
 
     var errors: u32 = 0;
     for (0..1024) |i| {
-        if (data[i] != @as(f32, @floatFromInt(i)) * 2.0) {
+        if (result[i] != @as(f32, @floatFromInt(i)) * 2.0) {
             errors += 1;
-            std.debug.print("wrong: data[{}] = {}\n", .{
+            std.debug.print("wrong: result[{}] = {}\n", .{
                 i,
-                data[i],
+                result[i],
             });
             if (errors > 5) {
                 return error.Wrong;

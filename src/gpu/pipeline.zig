@@ -180,4 +180,3 @@ pub const ComputePipeline = struct {
         }
     }
 };
-
