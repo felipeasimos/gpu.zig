@@ -80,30 +80,6 @@ pub const ComputePipeline = struct {
                 .descriptor_set_count = 1,
                 .p_set_layouts = &[_]vk.DescriptorSetLayout{desc_set_layout},
             }, @ptrCast(&desc_set));
-            const write_desc_sets = try self.b_gpu.allocator.alloc(vk.WriteDescriptorSet, self.b_buffers.items.len);
-            defer self.b_gpu.allocator.free(write_desc_sets);
-            for (self.b_buffers.items, 0..) |buf, i| {
-                write_desc_sets[i] = vk.WriteDescriptorSet{
-                    .dst_set = desc_set,
-                    .dst_binding = @intCast(i),
-                    .dst_array_element = 0,
-                    .descriptor_count = 1,
-                    .descriptor_type = buf.desc_type,
-                    .p_buffer_info = &[_]vk.DescriptorBufferInfo{.{
-                        .buffer = buf.handle,
-                        .offset = 0,
-                        .range = vk.WHOLE_SIZE,
-                    }},
-                    .p_image_info = undefined,
-                    .p_texel_buffer_view = undefined,
-                };
-            }
-            self.b_gpu.dev.updateDescriptorSets(
-                @intCast(self.b_buffers.items.len),
-                @ptrCast(write_desc_sets.ptr),
-                0,
-                null,
-            );
             const layout = try self.b_gpu.dev.createPipelineLayout(&vk.PipelineLayoutCreateInfo{
                 .set_layout_count = 1,
                 .p_set_layouts = &[_]vk.DescriptorSetLayout{desc_set_layout},
@@ -132,6 +108,34 @@ pub const ComputePipeline = struct {
                 null,
                 @ptrCast(&pipeline),
             );
+
+            const desc_buffer_infos = try self.b_gpu.allocator.alloc(vk.DescriptorBufferInfo, self.b_buffers.items.len);
+            defer self.b_gpu.allocator.free(desc_buffer_infos);
+            const write_desc_sets = try self.b_gpu.allocator.alloc(vk.WriteDescriptorSet, self.b_buffers.items.len);
+            defer self.b_gpu.allocator.free(write_desc_sets);
+            for (self.b_buffers.items, 0..) |buf, i| {
+                desc_buffer_infos[i] = .{
+                    .buffer = buf.handle,
+                    .offset = 0,
+                    .range = vk.WHOLE_SIZE,
+                };
+                write_desc_sets[i] = vk.WriteDescriptorSet{
+                    .dst_set = desc_set,
+                    .dst_binding = @intCast(i),
+                    .dst_array_element = 0,
+                    .descriptor_count = 1,
+                    .descriptor_type = buf.desc_type,
+                    .p_buffer_info = @ptrCast(&desc_buffer_infos[i]),
+                    .p_image_info = undefined,
+                    .p_texel_buffer_view = undefined,
+                };
+            }
+            self.b_gpu.dev.updateDescriptorSets(
+                @intCast(write_desc_sets.len),
+                @ptrCast(write_desc_sets.ptr),
+                0,
+                null,
+            );
             return .{
                 .buffers = self.b_buffers,
                 .desc_set_layout = desc_set_layout,
@@ -144,6 +148,19 @@ pub const ComputePipeline = struct {
         }
     };
 
+    pub fn bind(self: *@This(), gpu: *GPU, cmd_buffer: vk.CommandBuffer) void {
+        gpu.dev.cmdBindPipeline(cmd_buffer, .compute, self.pipeline);
+        gpu.dev.cmdBindDescriptorSets(
+            cmd_buffer,
+            .compute,
+            self.pipeline_layout,
+            0,
+            1,
+            @ptrCast(&self.desc_set),
+            0,
+            null,
+        );
+    }
     pub fn deinit(self: *@This(), gpu: *GPU) void {
         self.buffers.deinit(gpu.allocator);
         if (self.shader_module != .null_handle) {
@@ -163,3 +180,4 @@ pub const ComputePipeline = struct {
         }
     }
 };
+

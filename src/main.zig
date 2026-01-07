@@ -139,17 +139,7 @@ pub fn main() !void {
             .size = vk.WHOLE_SIZE,
         }}, 0, null // No image barriers
     );
-    gpu.dev.cmdBindPipeline(cmd_buffer, .compute, pipeline.pipeline);
-    gpu.dev.cmdBindDescriptorSets(
-        cmd_buffer,
-        .compute,
-        pipeline.pipeline_layout,
-        0,
-        1,
-        @ptrCast(&pipeline.desc_set),
-        0,
-        null,
-    );
+    pipeline.bind(&gpu, cmd_buffer);
 
     gpu.dev.cmdDispatch(cmd_buffer, 16, 1, 1);
     gpu.dev.cmdPipelineBarrier(cmd_buffer, vk.PipelineStageFlags{ .compute_shader_bit = true }, // Source: compute shader
