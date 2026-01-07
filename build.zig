@@ -1,6 +1,6 @@
 const std = @import("std");
 
-const GpuBackend = enum(u1) {
+pub const GpuBackend = enum {
     wgpu,
     vulkan,
 };
@@ -145,8 +145,8 @@ pub fn build(b: *std.Build) void {
     const optimize = b.standardOptimizeOption(.{});
 
     const vulkan = b.dependency("vulkan", .{
-        .registry = b.path("lib/vk.xml"),
-        .video = b.path("lib/video.xml"),
+        .registry = b.path("vk/vk.xml"),
+        .video = b.path("vk/video.xml"),
     }).module("vulkan-zig");
     // const wgpu = b.dependency("wgpu_native_zig", .{
     //     .link_mode = std.builtin.LinkMode.static,
@@ -209,23 +209,9 @@ pub fn build(b: *std.Build) void {
         },
     });
 
-    get_spirv_shaders_using_glslc(b, "src/shaders/", exe_mod) catch unreachable;
-    // get_spirv_shaders(b, "src/shaders/", exe_mod) catch unreachable;
-
     if (target.result.os.tag != .emscripten) {
         gpu.linkLibrary(zglfw.artifact("glfw"));
     }
-
-    const exe = b.addExecutable(.{
-        .name = "gpu",
-        .root_module = exe_mod,
-        .use_llvm = use_llvm,
-    });
-    b.installArtifact(exe);
-    const run_exe = b.addRunArtifact(exe);
-
-    const exe_step = b.step("run", "Run executable");
-    exe_step.dependOn(&run_exe.step);
 
     // add check step for fast ZLS diagnostics on tests and library
     const check_lib_tests_mod = b.createModule(.{

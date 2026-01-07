@@ -1,6 +1,6 @@
 const std = @import("std");
 const gpu_zig = @import("gpu");
-const zglfw = @import("zglfw");
+const zglfw = gpu_zig.zglfw;
 const vk = gpu_zig.vk;
 const Buffer = gpu_zig.Buffer;
 const ComputePipeline = gpu_zig.ComputePipeline;

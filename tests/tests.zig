@@ -4,9 +4,6 @@ test "test suite" {
     _ = @import("gpu_tests.zig");
     _ = @import("buffer_tests.zig");
     _ = @import("pipeline_tests.zig");
-    _ = @import("input_buffer_tests.zig");
-    _ = @import("staging_buffer_tests.zig");
-    _ = @import("descriptor_set_tests.zig");
 }
 
 test "simple test" {

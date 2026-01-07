@@ -24,6 +24,7 @@ const CommandBuffer = vk.CommandBufferProxy;
 pub const GPU = struct {
     pub const CommandBuffer = vk.CommandBufferProxy;
 
+    lib: std.DynLib, // vulkan loader
     allocator: std.mem.Allocator,
     vkb: BaseWrapper,
     instance: Instance,
@@ -352,7 +353,6 @@ pub const GPU = struct {
 
     fn initInstance(self: *GPU, app_name: [:0]const u8, extensions: [][*:0]const u8, layers: [][*:0]const u8) !void {
         var lib = try getVulkanLoader();
-        defer lib.close();
 
         const getInstanceProcAddr = lib.lookup(vk.PfnGetInstanceProcAddr, "vkGetInstanceProcAddr") orelse return error.MissingSymbol;
 
@@ -379,6 +379,7 @@ pub const GPU = struct {
         errdefer self.allocator.destroy(vki);
         vki.* = InstanceWrapper.load(instance, self.vkb.dispatch.vkGetInstanceProcAddr.?);
         self.instance = Instance.init(instance, vki);
+        self.lib = lib;
     }
 
     pub fn deinit(self: GPU) void {
@@ -391,6 +392,8 @@ pub const GPU = struct {
         // Don't forget to free the tables to prevent a memory leak.
         self.allocator.destroy(self.dev.wrapper);
         self.allocator.destroy(self.instance.wrapper);
+        var lib = self.lib;
+        lib.close();
     }
 
     pub fn findMemoryTypeIndex(self: *GPU, memory_type_bits: u32, flags: vk.MemoryPropertyFlags) !u32 {
