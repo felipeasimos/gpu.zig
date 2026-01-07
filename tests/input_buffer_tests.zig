@@ -85,8 +85,8 @@ test "minimal compute shader data access - 4 elements with staging buffers" {
     // Create compute pipeline with device buffers
     var pipeline = try ComputePipeline.Builder.init(&gpu)
         .code(&simple_compute_spv)
-        .buffer(dev_in_buf)
-        .buffer(dev_out_buf)
+        .buffer(&dev_in_buf)
+        .buffer(&dev_out_buf)
         .build();
     defer pipeline.deinit(&gpu);
 
@@ -176,7 +176,6 @@ test "minimal compute shader data access - 4 elements with staging buffers" {
     std.debug.print("Expected: [{d:.1}, {d:.1}, {d:.1}, {d:.1}]\n", .{ expected_result[0], expected_result[1], expected_result[2], expected_result[3] });
     std.debug.print("Actual:   [{d:.1}, {d:.1}, {d:.1}, {d:.1}]\n", .{ result_data[0], result_data[1], result_data[2], result_data[3] });
 
-    // Verify results
     for (0..4) |i| {
         try testing.expectApproxEqRel(expected_result[i], result_data[i], 0.001);
     }

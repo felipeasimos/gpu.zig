@@ -93,8 +93,8 @@ test "descriptor set creation and binding verification" {
     std.debug.print("Creating compute pipeline...\n", .{});
     var pipeline = try ComputePipeline.Builder.init(&gpu)
         .code(&simple_compute_spv)
-        .buffer(dev_in_buf)
-        .buffer(dev_out_buf)
+        .buffer(&dev_in_buf)
+        .buffer(&dev_out_buf)
         .build();
     defer pipeline.deinit(&gpu);
 
