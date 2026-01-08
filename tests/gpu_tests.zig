@@ -31,9 +31,6 @@ test "test failure to init" {
 }
 
 test "test compute queue init" {
-    try initZglfwForVulkan();
-    defer zglfw.terminate();
-
     const title = std.fmt.comptimePrint("SVDAG - {s}", .{gpu_zig.options.git_commit_hash});
 
     var gpu = try GPU.Builder.init(testing.allocator)
